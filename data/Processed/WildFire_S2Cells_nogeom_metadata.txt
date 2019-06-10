@@ -1,0 +1,61 @@
+Variables: 
+FIRE_CUSTOM_ID : str, custom created ID to identify each wildfire  (Derived)
+S2_Cells_ID : int, S2 Cell ID (Derived)
+AGENCY : str, Direct protection agency responsible for fire (Original)
+UNIT_ID : str,  ICS code for unit (Original)
+CAUSE : str, Reason fire ignited (Original)
+GIS_ACRES : fload, GIS calculated area in acres (Original)
+C_METHOD : str, Method used to collect perimeter data (Original)
+OBJECTIVE : str, Either suppression or resource benefit  (Original)
+Shape_Length : float (Original)
+Shape_Area : float (Original)
+YEAR : int, Fire Year (Derived)
+ALARM_DATE_DT_DT : date, Alarm date for fire (Derived)
+CONT_DATE_DT_DT : date, Containment date for fire (Derived)
+FIRE_DUR : int, Fire duration in days (Derived)
+ALARM_DATE_MONTH : int, Fire alarm month (Derived)
+
+FIRE_CUSTOM_ID:
+FireName_Date_Count
+For example, MAGIC_2007_10_22_0.
+'Count' is used to make unique ids for fires that have the same name and alarm date but the underlying data is different. 
+
+Agency  Description
+BIA USDI Bureau of Indian Affairs
+BLM Bureau of Land Management
+CDF California Department of Forestry and Fire Protection
+CCO Contract Counties
+DOD Department of Defense
+FWS USDI Fish and Wildlife Service
+LRA Local Response Area
+NOP No Protection
+NPS National Park Service
+PVT Private
+USF United States Forest Service
+OTH Other
+
+
+Cause Code  Description
+1   Lightning
+2   Equipment Use
+3   Smoking
+4   Campfire
+5   Debris
+6   Railroad
+7   Arson
+8   Playing with Fire
+9   Miscellaneous
+10  Vehicle
+11  Power Line
+12  Firefighter Training
+13  Non-Firefighter Training
+14  Unknown/Unidentified
+15  Structure
+16  Aircraft
+17  Volcanic
+18  Escaped Prescribed Burn
+19  Illegal Alien Campfire
+
+Objective Code  Description
+1   Suppression (Wildfire)
+2   Resource Benefit (WFU)
