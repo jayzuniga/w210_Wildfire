@@ -1,0 +1,6 @@
+#!/bin/bash
+for i in {01..12} ; do
+    wget -r --reject "index.html*" --user=$USER --password=$PASS https://land.copernicus.vgt.vito.be/PDF/datapool/Vegetation/Properties/FAPAR_300m_V1/2014/$i/
+    python ~/w210_Wildfire/sat_process/pickle_sat.py land.copernicus.vgt.vito.be/ ~/sat_pickles/
+    find land.copernicus.vgt.vito.be/ -name *.nc -type f -delete
+done
