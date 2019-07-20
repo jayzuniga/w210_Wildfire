@@ -35,7 +35,7 @@ After much deliberation and weighing different options, we decided to split Cali
 
 In total, California consisted of 10,643 S2 Cells. Hence, our final modeling dataset would consist of 11,664,728 observations (10,643 cells by 1,096 days).
 
-Insert ca-s2
+![California-S2](https://github.com/jayzuniga/w210_Wildfire/blob/master/blog/images/ca_s2.png?raw=true)
 
 ## Creating Our Final Dataset
 
