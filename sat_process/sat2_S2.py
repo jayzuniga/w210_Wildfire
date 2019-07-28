@@ -15,7 +15,7 @@ python sat2_S2.py '/home/scott/sat_pickles/' '/home/scott/sat_aggs/' 2014
 import datetime as dt  # Python standard library datetime  module
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap, addcyclic, shiftgrid
+#from mpl_toolkits.basemap import Basemap, addcyclic, shiftgrid
 
 import s2_py as s2
 import pandas as pd
@@ -36,16 +36,59 @@ from shapely.geometry import Polygon, mapping, Point
 
 import time
 
-# Define slightly customized aggregation functions
+# Define  customized aggregation functions
+# https://stackoverflow.com/questions/10951341/pandas-dataframe-aggregate-function-using-multiple-columns
 
-def myMedian(x):
-    return(pd.DataFrame.median(x, skipna=True))
+def myMean(group):
+    fV = group['faparVal']
+    m = group['faparMask']
+    y = np.ma.MaskedArray(data=fV, mask=m)
+    return np.ma.mean(y)
 
-def myMean(x):
-    return(np.ma.mean(x))
+def myMedian(group):
+    fV = group['faparVal']
+    m = group['faparMask']
+    try:
+        outVal = np.median(fV.loc[m==False])  # np.ma.median doesn't work correctly
+    except:
+        return np.ma.masked
+    return outVal
+    
+def myStd(group):
+    fV = group['faparVal']
+    m = group['faparMask']
+    try:
+        outVal = np.std(fV.loc[m==False])   # np.ma.std doesn't work correctly
+    except:
+        outVal = np.ma.masked
+    
+    if np.isnan(outVal):
+        outVal = np.ma.masked
+    return outVal
 
-def myStd(x):
-    return(np.ma.std(x))
+def myMin(group):
+    fV = group['faparVal']
+    m = group['faparMask']
+    try:
+        outVal = np.min(fV.loc[m==False])   # np.ma.std doesn't work correctly
+    except:
+        outVal = np.ma.masked
+    
+    if np.isnan(outVal):
+        outVal = np.ma.masked
+    return outVal
+
+def myMax(group):
+    fV = group['faparVal']
+    m = group['faparMask']
+    try:
+        outVal = np.max(fV.loc[m==False])   # np.ma.std doesn't work correctly
+    except:
+        outVal = np.ma.masked
+    
+    if np.isnan(outVal):
+        outVal = np.ma.masked
+    return outVal
 
 
 print ('Number of arguments:', len(sys.argv), 'arguments.')
@@ -68,19 +111,6 @@ for dirpath, dirnames, filenames in os.walk(data_dir):
         picklefiles[filename] = (os.path.join(dirpath, filename)) 
 
 dates = []
-
-
-"""
-for filename, fullpath in picklefiles.items():
-    if filename.startswith('Lat'):
-            dateStart = filename.find(str(year))
-            date = filename[dateStart:dateStart+8]
-            with open(fullpath, 'rb') as f:
-                lat = pickle.load(f)
-            lats[date] = lat
-
-
-"""
 
 lats ={}
 for filename, fullpath in picklefiles.items():
@@ -156,23 +186,50 @@ for date in sorted(dates):
             latLonLookupList.append((idxLat, lat, idxLon, lon, fapar[idxLat, idxLon], fapar.mask[idxLat, idxLon], 10, cell10.ToToken()))
             latLonLookupList.append((idxLat, lat, idxLon, lon, fapar[idxLat, idxLon], fapar.mask[idxLat, idxLon], 11, cell11.ToToken()))
 
+    # Get S2 cells df for merging
     latLonLookupDF = pd.DataFrame(latLonLookupList, columns= ['latIdx', 'lat', 'lonIdx', 'lon', 'faparVal', 'faparMask', 'S2Level', 'S2_Cells_I'])
-
     latLonLookupDF['mergeKey'] = latLonLookupDF.S2_Cells_I.astype(str)
     ca_s2_df['mergeKey'] = ca_s2_df.S2_Cells_I.astype(str)
-    print(f"Merging")
+    
+    # Perform merge to desired S2 cell levels
     merged = ca_s2_df.merge(latLonLookupDF, how='inner', on= 'mergeKey', left_index = True)
-    faparMerged = merged[['mergeKey', 'latIdx', 'lat', 'lonIdx', 'lon', 'faparVal', 'faparMask']]
-    print(f"Aggregating")
-    agged = faparMerged.groupby('mergeKey').agg(['min', 'max', myMean, myMedian, myStd, 'size', 'count', 'nunique'])
-    agged2 = agged.copy()
+    
+   
+    # Subset to desired columns
+    faparMerged = merged[['mergeKey', 'lat', 'lon', 'faparVal', 'faparMask']]
+    # Perform aggregations
+    grouped = faparMerged.groupby('mergeKey')
+    # Aggregate for standard functions
+    groupedOut = grouped.agg(['min', 'max', 'mean', 'median', 'std', 'size', 'count', 'nunique'])
+
+    # Apply the custom aggregation functions that depend on multiple columns (due to masking)
+    groupedOut2 = pd.DataFrame()
+    groupedOut2['mergeKey'] = grouped.indices
+    groupedOut2['faparVal_myMean'] = grouped.apply(myMean)
+    groupedOut2['faparVal_myMedian'] = grouped.apply(myMedian)
+    groupedOut2['faparVal_myStd'] = grouped.apply(myStd)
+    
+    # Get  the standard agregations for columns that also have custom aggregations
+    aggedFapar = faparMerged[['faparVal', 'mergeKey']].groupby('mergeKey').agg(['min','max', 'size', 'count', 'nunique'])
+    agged2 = groupedOut.copy()
+    # Merge the standard columns for masked and unmasked column types
+    agged2 = agged2.merge(aggedFapar, on = 'mergeKey')
+    # Flatten the index
     agged2.columns = ['_'.join(col).strip() for col in agged2.columns.values]
+    # Merge with the custom columns
+    agged3 = agged2.merge(groupedOut2, on='mergeKey')
+    
+    #Save it
     fullPath = output_dir + date + '_agg.csv'
     print(f"Saving")
-    agged2.to_csv(fullPath)
+    agged3.to_csv(fullPath)
+    
+    # Make a plot of the mean
     print(f"Plotting")
-    agged3 = ca_s2_df.merge(agged2, on = 'mergeKey')
-    fig = agged3.plot(column = 'faparVal_myMean')
+    plotDf = ca_s2_df.merge(agged3, on = 'mergeKey')
+    plotDf['faparVal_myMean'] = plotDf['faparVal_myMean'].astype('float64')
+    ax = plotDf.plot(column = 'faparVal_myMean', label = 'Mean FAPAR', legend = True)
+    plt.title('Mean FAPAR')
     plt.savefig(output_dir + str(date) + '.png')
     end = time.time()
     print(f"Total time is {end - start}")
