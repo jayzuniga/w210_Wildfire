@@ -1,0 +1,53 @@
+SELECT s2_cell_id, measure_date,
+LAG (fuel_percent,1) OVER (PARTITION BY s2_cell_id ORDER BY measure_date) AS fuel_percent_l1,
+LAG (wea_air_temp_mean,1) OVER (PARTITION BY s2_cell_id ORDER BY measure_date) AS wea_air_temp_mean_l1,
+LAG (wea_precip_accum_max,1) OVER (PARTITION BY s2_cell_id ORDER BY measure_date) AS wea_precip_accum_max_l1,
+LAG (relative_humidity_mean,1) OVER (PARTITION BY s2_cell_id ORDER BY measure_date) AS relative_humidity_mean_l1
+FROM `wildfire-242801.WildFire.consolidated_by_cell_day_4`
+ORDER BY s2_cell_id, measure_date
+
+SELECT s2_cell_id, measure_date,
+AVG (wea_air_temp_mean) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 6 PRECEDING) AS wea_air_temp_mean_ma7,
+AVG (wea_precip_accum_max) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 6 PRECEDING) AS wea_precip_accum_max_ma7,
+AVG (relative_humidity_mean) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 6 PRECEDING) AS relative_humidity_mean_ma7
+FROM `wildfire-242801.WildFire.consolidated_by_cell_day_4`
+ORDER BY s2_cell_id, measure_date
+
+SELECT s2_cell_id, measure_date,
+AVG (wea_air_temp_mean) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 29 PRECEDING) AS wea_air_temp_mean_ma30,
+AVG (wea_precip_accum_max) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 29 PRECEDING) AS wea_precip_accum_max_ma30,
+AVG (relative_humidity_mean) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 29 PRECEDING) AS relative_humidity_mean_ma30
+FROM `wildfire-242801.WildFire.consolidated_by_cell_day_4`
+ORDER BY s2_cell_id, measure_date
+
+
+SELECT s2_cell_id, measure_date,
+  AVG (fuel_percent) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 6 PRECEDING) AS fuel_percent_ma7,
+  AVG (fuel_percent) OVER (PARTITION BY s2_cell_id ORDER BY measure_date ASC ROWS 29 PRECEDING) AS fuel_percent_ma30
+FROM (
+  SELECT s2_cell_id, measure_date,
+  CASE WHEN fuel_percent = 'backfill' THEN 78.74 ELSE CAST(fuel_percent AS NUMERIC) END AS fuel_percent
+  FROM `wildfire-242801.WildFire.consolidated_by_cell_day_4` )
+
+
+
+SELECT fp.s2_cell_id, fp.measure_date,
+    fp.fuel_percent_ma7,
+    fp.fuel_percent_ma30,
+    lag.fuel_percent_l1,
+    lag.wea_air_temp_mean_l1,
+    lag.wea_precip_accum_max_l1,
+    lag.relative_humidity_mean_l1,
+    ma7.wea_air_temp_mean_ma7,
+    ma7.wea_precip_accum_max_ma7,
+    ma7.relative_humidity_mean_ma7,
+    ma30.wea_air_temp_mean_ma30,
+    ma30.wea_precip_accum_max_ma30,
+    ma30.relative_humidity_mean_ma30
+FROM `wildfire-244823.Baseline_Dataset.fuel_percent_ma` as fp
+JOIN `wildfire-244823.Baseline_Dataset.weather_lag1` as lag
+ON fp.s2_cell_id = lag.s2_cell_id AND fp.measure_date = lag.measure_date
+JOIN `wildfire-244823.Baseline_Dataset.weather_ma7` as ma7
+ON fp.s2_cell_id = ma7.s2_cell_id AND fp.measure_date = ma7.measure_date
+JOIN `wildfire-244823.Baseline_Dataset.weather_ma30` as ma30
+ON fp.s2_cell_id = ma30.s2_cell_id AND fp.measure_date = ma30.measure_date
