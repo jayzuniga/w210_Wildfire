@@ -9,7 +9,7 @@ python sat2_S2.py <input_dir> <output_dir>
 
 Example
 
-python sat2_S2.py '/home/scott/sat_pickles/' '/home/scott/sat_aggs/' 2014
+python sat2_S2.py '/home/scott/sat_pickles/' '/home/scott/sat_aggs/' 2016
 
 """
 import datetime as dt  # Python standard library datetime  module
@@ -89,6 +89,8 @@ def myMax(group):
     if np.isnan(outVal):
         outVal = np.ma.masked
     return outVal
+
+
 
 
 print ('Number of arguments:', len(sys.argv), 'arguments.')
@@ -193,8 +195,7 @@ for date in sorted(dates):
     
     # Perform merge to desired S2 cell levels
     merged = ca_s2_df.merge(latLonLookupDF, how='inner', on= 'mergeKey', left_index = True)
-    
-   
+
     # Subset to desired columns
     faparMerged = merged[['mergeKey', 'lat', 'lon', 'faparVal', 'faparMask']]
     # Perform aggregations
@@ -208,9 +209,12 @@ for date in sorted(dates):
     groupedOut2['faparVal_myMean'] = grouped.apply(myMean)
     groupedOut2['faparVal_myMedian'] = grouped.apply(myMedian)
     groupedOut2['faparVal_myStd'] = grouped.apply(myStd)
+    groupedOut2['faparVal_min'] = grouped.apply(myMin)
+    groupedOut2['faparVal_max'] = grouped.apply(myMax)
     
+    #TODO use the custom min and max
     # Get  the standard agregations for columns that also have custom aggregations
-    aggedFapar = faparMerged[['faparVal', 'mergeKey']].groupby('mergeKey').agg(['min','max', 'size', 'count', 'nunique'])
+    aggedFapar = faparMerged[['faparVal', 'mergeKey']].groupby('mergeKey').agg(['size', 'count', 'nunique'])
     agged2 = groupedOut.copy()
     # Merge the standard columns for masked and unmasked column types
     agged2 = agged2.merge(aggedFapar, on = 'mergeKey')
@@ -218,6 +222,8 @@ for date in sorted(dates):
     agged2.columns = ['_'.join(col).strip() for col in agged2.columns.values]
     # Merge with the custom columns
     agged3 = agged2.merge(groupedOut2, on='mergeKey')
+    dateFormatted = date[0:4] + '-' + date[4:6] + '-' + date[6:]
+    agged3['date'] = dateFormatted
     
     #Save it
     fullPath = output_dir + date + '_agg.csv'
